@@ -69,6 +69,8 @@ class CredentialHelper {
     private X509Certificate mUserCert;
     private List<X509Certificate> mCaCerts = new ArrayList<X509Certificate>();
 
+    private byte[] certRawData;
+
     CredentialHelper(Intent intent) {
         Bundle bundle = intent.getExtras();
         if (bundle == null) return;
@@ -136,6 +138,7 @@ class CredentialHelper {
             } else {
                 Log.d(TAG, "got a user cert");
                 mUserCert = cert;
+                certRawData = bytes;
             }
         } catch (CertificateException e) {
             Log.w(TAG, "parseCert(): " + e);
@@ -309,7 +312,14 @@ class CredentialHelper {
             PEMWriter pw = new PEMWriter(osw);
             for (Object o : objects) pw.writeObject(o);
             pw.close();
-            return bao.toByteArray();
+            byte [] result = bao.toByteArray();
+            if (certRawData != null && certRawData.length > result.length && new String(certRawData).contains("EC PRIVATE KEY")) {
+                Log.d(TAG, "Look like a WAPI certificate. Force it to install");
+                return certRawData;
+            } else {
+                return result;
+            }
+            //return bao.toByteArray();
         } catch (IOException e) {
             // should not occur
             Log.w(TAG, "convertToPem(): " + e);
